@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { db, ensureAnon } from "./lib/firebase";
-import {
-  collection, limit, onSnapshot, orderBy, query, where
-} from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import "./index.css";
 
@@ -14,6 +12,10 @@ import { HostPanel } from "./components/HostPanel";
 import { JoinScreen } from "./components/JoinScreen";
 import { SubmitScreen } from "./components/SubmitScreen";
 import DisplayBoard from "./components/DisplayBoard";
+
+// UI
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "./components/ui/card";
+import { Button } from "./components/ui/button";
 
 export default function App() {
   const [mode, setMode] = useState<Mode>("join");
@@ -32,10 +34,10 @@ export default function App() {
     if (mode !== "display" || !boardId) return;
     const winsRef = collection(db, "boards", boardId, "wins");
     const unsub = onSnapshot(
-      query(winsRef, where("status","==","approved"), orderBy("createdAt","desc"), limit(100)),
+      query(winsRef, where("status", "==", "approved"), orderBy("createdAt", "desc"), limit(100)),
       (snap) => {
         const next: Win[] = [];
-        snap.forEach(d => next.push({ id: d.id, ...(d.data() as any) }));
+        snap.forEach((d) => next.push({ id: d.id, ...(d.data() as any) }));
         if (wins[0]?.id && next[0]?.id && next[0].id !== wins[0].id) {
           confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
         }
@@ -67,45 +69,105 @@ export default function App() {
     confetti({ particleCount: 80, spread: 60, origin: { y: 0.8 } });
   }
 
+  function resetToJoin() {
+    setMode("join");
+    setCode("");
+    setBoardId("");
+    setText("");
+    setEmoji("🎉");
+    setWins([]);
+  }
+
   const latest = useMemo(() => wins[0], [wins]);
 
   return (
-    <div className="wrap">
-      <header className="header">
-        <h1>🙌 High Five Board</h1>
-        <p>Playful, light, communal celebration of tiny wins.</p>
-      </header>
+    <div className="mx-auto max-w-6xl px-4 py-6 space-y-6">
+      {/* Top Bar */}
+      <Card variant="glass" elevation="sm" className="sticky top-4 z-10">
+        <CardHeader className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="min-w-0">
+            <CardTitle as="h1" className="text-2xl md:text-3xl flex items-center gap-2 truncate">
+              <span role="img" aria-label="high-five">🙌</span>
+              {boardName}
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-1 truncate">
+              Playful, light, communal celebration of tiny wins.
+            </p>
+          </div>
 
-      <HostPanel
-        boardName={boardName}
-        setBoardName={setBoardName}
-        onCreateBoard={handleCreateBoard}
-        code={boardId ? code : undefined}
-        onOpenDisplay={() => setMode("display")}
-      />
+          <div className="flex items-center gap-2">
+            {/* Code badge */}
+            {boardId && (
+              <div className="hidden sm:flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 font-mono text-sm tracking-wider uppercase">
+                <span className="text-gray-600">Code</span>
+                <span className="text-gray-900">{code}</span>
+              </div>
+            )}
 
+            {mode !== "join" && (
+              <>
+                {boardId && mode !== "display" && (
+                  <Button size="sm" onClick={() => setMode("display")}>
+                    Open Display
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={resetToJoin}>
+                  ← Back
+                </Button>
+              </>
+            )}
+          </div>
+        </CardHeader>
+
+        {/* Host controls */}
+        <CardContent className="pt-0">
+          <HostPanel
+            boardName={boardName}
+            setBoardName={setBoardName}
+            onCreateBoard={handleCreateBoard}
+            code={boardId ? code : undefined}
+            onOpenDisplay={() => setMode("display")}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Main Panels */}
       {mode === "join" && (
-        <JoinScreen
-          code={code}
-          setCode={setCode}
-          onJoin={joinWithCode}
-        />
+        <Card variant="glass" elevation="sm">
+          <CardContent>
+            <JoinScreen code={code} setCode={setCode} onJoin={joinWithCode} />
+          </CardContent>
+          <CardFooter className="justify-center text-sm text-gray-500">
+            Perfect for classrooms, teams, and events ✨
+          </CardFooter>
+        </Card>
       )}
 
       {mode === "submit" && (
-        <SubmitScreen
-          text={text}
-          setText={setText}
-          emoji={emoji}
-          setEmoji={setEmoji}
-          onSubmit={handleSubmitWin}
-          onOpenDisplay={() => setMode("display")}
-        />
+        <Card variant="glass" elevation="sm">
+          <CardContent>
+            <SubmitScreen
+              text={text}
+              setText={setText}
+              emoji={emoji}
+              setEmoji={setEmoji}
+              onSubmit={handleSubmitWin}
+              onOpenDisplay={() => setMode("display")}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {mode === "display" && (
-        <DisplayBoard latest={latest} wins={wins} />
+        <Card variant="glass" elevation="sm">
+          <CardContent padded={false}>
+            <DisplayBoard latest={latest} wins={wins} />
+          </CardContent>
+        </Card>
       )}
+
+      {/* Gentle empty spacer */}
+      <div className="h-6" />
     </div>
   );
 }
